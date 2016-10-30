@@ -12,13 +12,23 @@ const sentryTimeFormat = "2006-01-02T15:04:05"
 
 // event represents message format expected by Sentry
 type event struct {
-	ID         string     `json:"event_id"`
-	Text       string     `json:"message"`
-	Timestamp  string     `json:"timestamp"`
-	Level      severity   `json:"level,omitempty"`
-	Platform   string     `json:"platform"`
-	Culprit    string     `json:"culprit,omitempty"`
+	ID        string   `json:"event_id"`
+	Text      string   `json:"message"`
+	Timestamp string   `json:"timestamp"`
+	Level     severity `json:"level,omitempty"`
+	Culprit   string   `json:"culprit,omitempty"`
+
+	// https://docs.sentry.io/clientdev/interfaces/exception/
 	Exceptions exceptions `json:"exception,omitempty"`
+
+	// https://docs.sentry.io/clientdev/interfaces/message/
+	Details *details `json:"logentry,omitempty"`
+}
+
+type details struct {
+	Text   string   `json:"formatted"`
+	Format string   `json:"message"`
+	Params []string `json:"params"`
 }
 
 type exceptions []ravenException

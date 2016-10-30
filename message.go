@@ -36,10 +36,16 @@ func newMessage(text, format string, vals []interface{}) *message {
 		Text:      text,
 		Timestamp: msg.ts.Format(sentryTimeFormat),
 		Level:     levelInfo,
-		Platform:  "go",
+	}
+	if format != "" && len(vals) > 0 {
+		evt.Details = &details{Format: format, Text: text}
 	}
 	var errs []error
 	for _, v := range vals {
+		if evt.Details != nil {
+			evt.Details.Params = append(evt.Details.Params,
+				fmt.Sprint(v))
+		}
 		switch err := v.(type) {
 		case error:
 			if err != nil {

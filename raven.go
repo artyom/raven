@@ -1,5 +1,23 @@
 // Package raven implements basic Sentry client compatible with standard logging
 // facilities.
+//
+// Consider your program takes *log.Logger and only uses its Print, Println,
+// Printf methods. Then you can update your code signature to take Logger
+// interface instead of exact *log.Logger type and use this package to provide
+// drop-in replacement to usual logging like this:
+//
+// 	logger, err := raven.New(WithDSN(os.Getenv("SENTRY_DSN")))
+//	... // handle error
+//
+//	logger.Print("some informational message")
+//
+//	if err := myfunc() ; err != nil {
+//		logger.Printf("myfunc failed: %v", err)
+//	}
+//
+// Client automatically marks messages having non-nil error arguments as error
+// events in Sentry; if error has stacktrace attached to it with
+// github.com/pkg/errors package, this stacktrace is sent to Sentry as well.
 package raven
 
 import (
@@ -122,18 +140,26 @@ func (c *Client) loopSend(client *http.Client) {
 	}
 }
 
+// Print creates new event and pushes it to outgoing queue. Arguments are
+// handled in the manner of fmt.Print.
 func (c *Client) Print(v ...interface{}) {
 	c.pushMessage(fmt.Sprint(v...), "", v)
 	if c.log != nil {
 		c.log.Print(v...)
 	}
 }
+
+// Println creates new event and pushes it to outgoing queue. Arguments are
+// handled in the manner of fmt.Println.
 func (c *Client) Println(v ...interface{}) {
 	c.pushMessage(fmt.Sprintln(v...), "", v)
 	if c.log != nil {
 		c.log.Println(v...)
 	}
 }
+
+// Printf creates new event and pushes it to outgoing queue. Arguments are
+// handled in the manner of fmt.Printf.
 func (c *Client) Printf(format string, v ...interface{}) {
 	c.pushMessage(fmt.Sprintf(format, v...), format, v)
 	if c.log != nil {
@@ -159,7 +185,8 @@ func (c *Client) Wait() { <-c.wait }
 // Write implements io.Writer interface so that Client can be used as an
 // underlying writer for log.Logger. It relies on log.Logger semantics that each
 // logging operation makes a single call to the Writer's Write method. Write
-// calls are non-blocking, they only put payload to send queue, so for cases // where log output is followed by program termination (i.e. log.Fatal() call)
+// calls are non-blocking, they only put payload to send queue, so for cases
+// where log output is followed by program termination (i.e. log.Fatal() call)
 // queued but unsent output will be lost.
 func (c *Client) Write(p []byte) (int, error) {
 	if c == nil || len(p) == 0 {
