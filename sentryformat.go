@@ -18,6 +18,9 @@ type event struct {
 	Level     severity `json:"level,omitempty"`
 	Culprit   string   `json:"culprit,omitempty"`
 
+	// https://docs.sentry.io/clientdev/attributes/
+	Tags map[string]string `json:"tags,omitempty"`
+
 	// https://docs.sentry.io/clientdev/interfaces/exception/
 	Exceptions exceptions `json:"exception,omitempty"`
 

@@ -9,11 +9,23 @@ import (
 
 func TestNewEvent(t *testing.T) {
 	const funcName = "failFoo"
-	msg := newMessage("test error message", "", []interface{}{1, true, failFoo()})
+	cl := &Client{tags: map[string]string{
+		"Foo": "fooVal",
+		"Bar": "barVal",
+	}}
+	msg := newMessage("test error message", "", []interface{}{1, true, failFoo()}, cl)
 	t.Logf("Marshalled event representation:\n%s\n", msg.payload)
 	var unp ravenEventExamine
 	if err := json.Unmarshal(msg.payload, &unp); err != nil {
 		t.Fatal(err)
+	}
+	if got, want := len(unp.Tags), len(cl.tags); got != want {
+		t.Fatalf("wrong number of tags in event: want %d, got %d", want, got)
+	}
+	for k, v := range cl.tags {
+		if v2, ok := unp.Tags[k]; !ok || v != v2 {
+			t.Errorf("wrong value for event tag %q: got %q, want %q", k, v2, v)
+		}
 	}
 	if got := unp.Culprit; got != funcName {
 		t.Fatalf("wrong culprit field in event: want %q, got %q", funcName, got)
@@ -39,7 +51,8 @@ func failFoo() error { return errors.New("boom") }
 // ravenEventExamine used to unpack marshalled wire-format event to verify its
 // fields
 type ravenEventExamine struct {
-	Culprit    string `json:"culprit"`
+	Culprit    string            `json:"culprit"`
+	Tags       map[string]string `json:"tags,omitempty"`
 	Exceptions []struct {
 		Type  string `json:"type"`
 		Text  string `json:"value"`

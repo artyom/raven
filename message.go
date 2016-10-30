@@ -26,7 +26,7 @@ type message struct {
 // it's safe to modify them after message is created. By default message has
 // "info" severity assigned, if vals contain non-nil error value, then message
 // severity set to "error" and error information is added to message.
-func newMessage(text, format string, vals []interface{}) *message {
+func newMessage(text, format string, vals []interface{}, c *Client) *message {
 	msg := &message{
 		text: text,
 		ts:   time.Now().UTC(),
@@ -36,6 +36,9 @@ func newMessage(text, format string, vals []interface{}) *message {
 		Text:      text,
 		Timestamp: msg.ts.Format(sentryTimeFormat),
 		Level:     levelInfo,
+	}
+	if c != nil && c.tags != nil {
+		evt.Tags = c.tags
 	}
 	if format != "" && len(vals) > 0 {
 		evt.Details = &details{Format: format, Text: text}

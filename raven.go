@@ -64,6 +64,15 @@ func WithDSN(dsn string) ConfFunc {
 	}
 }
 
+// WithTags configures Client to assign given set of tags to every message it
+// sends.
+func WithTags(tags map[string]string) ConfFunc {
+	return func(c *Client) (*Client, error) {
+		c.tags = tags
+		return c, nil
+	}
+}
+
 // New returns new Client initialized with provided configuration functions.
 // Basic configuration can be done using only WithDSN function:
 //
@@ -104,6 +113,8 @@ type Client struct {
 
 	apiURL string   // Sentry API endpoint URL created from DSN
 	auth   []string // authentication header values (public and private keys)
+
+	tags map[string]string // client-wide tags assigned to every message
 
 	log Logger
 }
@@ -206,7 +217,7 @@ func (c *Client) pushMessage(s, fmt string, vals []interface{}) {
 		return
 	}
 	select {
-	case c.messages <- newMessage(s, fmt, vals):
+	case c.messages <- newMessage(s, fmt, vals, c):
 	default:
 		if c.log != nil {
 			c.log.Print("raven queue overflow on: ", s)
