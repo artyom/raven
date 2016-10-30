@@ -17,6 +17,7 @@ type event struct {
 	Timestamp string   `json:"timestamp"`
 	Level     severity `json:"level,omitempty"`
 	Culprit   string   `json:"culprit,omitempty"`
+	Platform  string   `json:"platform"`
 
 	// https://docs.sentry.io/clientdev/attributes/
 	Tags map[string]string `json:"tags,omitempty"`

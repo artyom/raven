@@ -36,6 +36,7 @@ func newMessage(text, format string, vals []interface{}, c *Client) *message {
 		Text:      text,
 		Timestamp: msg.ts.Format(sentryTimeFormat),
 		Level:     levelInfo,
+		Platform:  "go",
 	}
 	if c != nil && c.tags != nil {
 		evt.Tags = c.tags
