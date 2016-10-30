@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 )
@@ -93,6 +94,9 @@ func New(conf ...ConfFunc) (*Client, error) {
 	if c.apiURL == "" || len(c.auth) == 0 {
 		return nil, errors.New("DSN not configured: use WithDSN function")
 	}
+	if name, err := os.Hostname(); err == nil {
+		c.hostname = name
+	}
 	hc := &http.Client{
 		Timeout: 30 * time.Second,
 	}
@@ -114,7 +118,8 @@ type Client struct {
 	apiURL string   // Sentry API endpoint URL created from DSN
 	auth   []string // authentication header values (public and private keys)
 
-	tags map[string]string // client-wide tags assigned to every message
+	tags     map[string]string // client-wide tags assigned to every message
+	hostname string
 
 	log Logger
 }

@@ -38,8 +38,9 @@ func newMessage(text, format string, vals []interface{}, c *Client) *message {
 		Level:     levelInfo,
 		Platform:  "go",
 	}
-	if c != nil && c.tags != nil {
+	if c != nil {
 		evt.Tags = c.tags
+		evt.Hostname = c.hostname
 	}
 	if format != "" && len(vals) > 0 {
 		evt.Details = &details{Format: format, Text: text}

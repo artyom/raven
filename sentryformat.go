@@ -18,6 +18,7 @@ type event struct {
 	Level     severity `json:"level,omitempty"`
 	Culprit   string   `json:"culprit,omitempty"`
 	Platform  string   `json:"platform"`
+	Hostname  string   `json:"server_name,omitempty"`
 
 	// https://docs.sentry.io/clientdev/attributes/
 	Tags map[string]string `json:"tags,omitempty"`
