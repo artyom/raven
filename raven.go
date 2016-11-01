@@ -39,14 +39,18 @@ type Logger interface {
 
 // ConfFunc is a function mutating Client that is used for configuration when
 // creating new Client. These functions should only be used as an argument to
-// New() function when creating new Client, they never should be used on already
-// started client.
+// New() function when creating new Client, attempt to apply such functions to
+// alreaty started client panics.
 type ConfFunc func(*Client) (*Client, error)
 
 // WithLogger adds Logger to Client. Client would be logging messages passed to
 // it as well as delivery/overflow errors to this Logger.
 func WithLogger(l Logger) ConfFunc {
 	return func(c *Client) (*Client, error) {
+		if c == nil {
+			c = new(Client)
+		}
+		c.init()
 		c.log = l
 		return c, nil
 	}
@@ -59,6 +63,10 @@ func WithDSN(dsn string) ConfFunc {
 		if err != nil {
 			return nil, err
 		}
+		if c == nil {
+			c = new(Client)
+		}
+		c.init()
 		c.apiURL = apiURL
 		c.auth = headers
 		return c, nil
@@ -69,8 +77,23 @@ func WithDSN(dsn string) ConfFunc {
 // sends.
 func WithTags(tags map[string]string) ConfFunc {
 	return func(c *Client) (*Client, error) {
+		if c == nil {
+			c = new(Client)
+		}
+		c.init()
 		c.tags = tags
 		return c, nil
+	}
+}
+
+func (c *Client) init() {
+	c.doInit.Do(func() {
+		c.messages = make(chan *message, 1000)
+		c.done = make(chan struct{})
+		c.wait = make(chan struct{})
+	})
+	if c.started {
+		panic(errRunningClientModify)
 	}
 }
 
@@ -80,11 +103,10 @@ func WithTags(tags map[string]string) ConfFunc {
 // 	client, err := New(WithDSN("https://public:secret@sentry.example.com/1"))
 //	...
 func New(conf ...ConfFunc) (*Client, error) {
-	c := &Client{
-		messages: make(chan *message, 1000),
-		done:     make(chan struct{}),
-		wait:     make(chan struct{}),
+	if len(conf) == 0 {
+		return nil, errors.New("no configuration functions provided")
 	}
+	var c *Client
 	var err error
 	for _, cfg := range conf {
 		if c, err = cfg(c); err != nil {
@@ -101,6 +123,7 @@ func New(conf ...ConfFunc) (*Client, error) {
 		Timeout: 30 * time.Second,
 	}
 	go c.loopSend(hc)
+	c.started = true
 	return c, nil
 }
 
@@ -111,9 +134,11 @@ func New(conf ...ConfFunc) (*Client, error) {
 // it's impossible to use interface.
 type Client struct {
 	messages chan *message
+	doInit   sync.Once     // guards Client initialize
 	once     sync.Once     // guards close of done channel
 	done     chan struct{} // signals termination of queue processing
 	wait     chan struct{} // used to block using Wait() method
+	started  bool          // if true, Client is NOT safe to be modified by ConfFunc
 
 	apiURL string   // Sentry API endpoint URL created from DSN
 	auth   []string // authentication header values (public and private keys)
@@ -229,3 +254,7 @@ func (c *Client) pushMessage(s, fmt string, vals []interface{}) {
 		}
 	}
 }
+
+// errRunningClientModify used as panic message thrown by ConfFuncs when they're
+// applied to already initialized/started Client
+const errRunningClientModify = "attempt to modify already initialized Client"
