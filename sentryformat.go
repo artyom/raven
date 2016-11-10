@@ -21,13 +21,24 @@ type event struct {
 	Hostname  string   `json:"server_name,omitempty"`
 
 	// https://docs.sentry.io/clientdev/attributes/
-	Tags map[string]string `json:"tags,omitempty"`
+	Tags  map[string]string `json:"tags,omitempty"`
+	Extra json.RawMessage   `json:"extra,omitempty"`
 
 	// https://docs.sentry.io/clientdev/interfaces/exception/
 	Exceptions exceptions `json:"exception,omitempty"`
 
 	// https://docs.sentry.io/clientdev/interfaces/message/
 	Details *details `json:"logentry,omitempty"`
+
+	// https://docs.sentry.io/clientdev/interfaces/http/
+	Request *reqInfo `json:"request,omitempty"`
+}
+
+type reqInfo struct {
+	URL     string            `json:"url"`
+	Method  string            `json:"method"`
+	Query   string            `json:"query_string,omitempty"`
+	Headers map[string]string `json:"headers,omitempty"`
 }
 
 type details struct {
@@ -37,13 +48,6 @@ type details struct {
 }
 
 type exceptions []ravenException
-
-func (e *exceptions) MarshalJSON() ([]byte, error) {
-	interm := struct {
-		Vals []ravenException `json:"values"`
-	}{Vals: *e}
-	return json.Marshal(interm)
-}
 
 type ravenException struct {
 	err error

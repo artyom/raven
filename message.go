@@ -31,7 +31,7 @@ func newMessage(text, format string, vals []interface{}, c *Client) *message {
 		text: text,
 		ts:   time.Now().UTC(),
 	}
-	evt := event{
+	evt := &event{
 		ID:        randomID(),
 		Text:      text,
 		Timestamp: msg.ts.Format(sentryTimeFormat),
@@ -41,6 +41,8 @@ func newMessage(text, format string, vals []interface{}, c *Client) *message {
 	if c != nil {
 		evt.Tags = c.tags
 		evt.Hostname = c.hostname
+		evt.Request = c.httpReq
+		evt.Extra = c.extra
 	}
 	if format != "" && len(vals) > 0 {
 		evt.Details = &details{Format: format, Text: text}

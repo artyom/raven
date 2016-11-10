@@ -21,6 +21,7 @@
 package raven
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -139,12 +140,15 @@ type Client struct {
 	done     chan struct{} // signals termination of queue processing
 	wait     chan struct{} // used to block using Wait() method
 	started  bool          // if true, Client is NOT safe to be modified by ConfFunc
+	isClone  bool          // true if client is a derived logger without background loop
 
 	apiURL string   // Sentry API endpoint URL created from DSN
 	auth   []string // authentication header values (public and private keys)
 
 	tags     map[string]string // client-wide tags assigned to every message
 	hostname string
+	httpReq  *reqInfo
+	extra    json.RawMessage
 
 	log Logger
 }
@@ -211,7 +215,7 @@ func (c *Client) Printf(format string, v ...interface{}) {
 // Close stops background goroutine processing message queue. Any messages
 // pushed to closed Client would be discarded.
 func (c *Client) Close() error {
-	if c == nil {
+	if c == nil || c.isClone {
 		return nil
 	}
 	c.once.Do(func() { close(c.done) })
@@ -253,6 +257,13 @@ func (c *Client) pushMessage(s, fmt string, vals []interface{}) {
 			c.log.Print("raven queue overflow on: ", s)
 		}
 	}
+}
+
+// clone returns shallow copy of client
+func (c *Client) clone() *Client {
+	c2 := *c
+	c2.isClone = true
+	return &c2
 }
 
 // errRunningClientModify used as panic message thrown by ConfFuncs when they're
